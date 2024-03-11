@@ -3,7 +3,7 @@
 > The goal of this project is to learn basic techniques for analyzing microbiome data and investigate if human gut, palm, and tongue microbiomes differ in terms of composition and microbial diversity. 
 
 ## Introduction:
-Over 90% of the human body is made up of non-human cells, mostly consisting of bacteria (~99%)<sup>1,2</sup>. These microorganisms, collectively termed the human microbiota<sup>3</sup>, have been shown to impact various host processes, including malnutrition and obesity<sup>4</sup>, inflammatory bowel disease<sup>5</sup>, and drug metabolism<sup>6</sup>. Therefore, understanding microbes and their composition in microbial communities at a genome level has important applications in the mechanisms of human disease and research involving bacteria. Using 16S ribosomal RNA (rRNA) sequencing, profiling microbiome data can identify species present in the samples and determine their relative abundance, enabling the measurement of microbial diversity of samples and the comparison of microbial diversity across samples<sup>7,8,9</sup>. We plan to host a tutorial covering bioinformatic methods in microbiome analysis. Using bioinformatic tools we can classify samples based on their microbial diversity and look at changes of aggregated measures under different treatments to the sampled microbe community.
+Microbes are ubiquitous and have been shown to impact various host processes, including malnutrition and obesity<sup>4</sup>, inflammatory bowel disease<sup>5</sup>, and drug metabolism<sup>6</sup>. Therefore, understanding microbes and their composition in microbial communities at a genome level has important applications in the mechanisms of human disease and research involving bacteria. Using 16S ribosomal RNA (rRNA) sequencing, profiling microbiome data can identify species present in the samples and determine their relative abundance, enabling the measurement of microbial diversity of samples and the comparison of microbial diversity across samples<sup>7,8,9</sup>. This tutorial aims to cover bioinformatic methods in microbiome analysis. Using bioinformatic tools we can classify samples based on their microbial diversity and look at changes of aggregated measures under different treatments to the sampled microbe community.
 
 # Methods:
 This tutorial uses a subset of publicly available hypervariable region 4 (V4) 16S rRNA dataset from Caporaso et al. (2011)<sup>10</sup>. The subset data includes human microbial samples taken from gut, left palm, right palm, and tongue. Three tsv files (feature-table.tsv, sample-metadata.tsv, taxonomy.tsv) will be made available through GitHub. R packages required in this tutorial include phyloseq<sup>11</sup>, tidyverse<sup>12</sup>, vegan<sup>13</sup>, DESeq2<sup>14</sup>, and ComplexHeatmap<sup>15</sup>.
@@ -13,14 +13,15 @@ The class will first load data, then perform basic data inspection and cleaning 
 
 * Data cleaning & formatting
 * Rarefaction
-* Calculation of alpha & beta diversity
-* PCoA plots
-* PERMANOVA to compare samples from different environments
-* Relative abundance profiles on genus and species level
+* Calculation of alpha diversity
+* Calculation of beta diversity & ERMANOVA to compare samples from different environments
+* Relative abundance profiles on phylum and genus level
 * Differential abundance analysis & heatmaps
 
 # Data Availability
-Access to the Data files to follow along the tutorial can be accessed here: [Google Drive Folder Link](https://drive.google.com/drive/folders/1L4oR2CkqmCIcGuHUSuyaQnW9GlauV3yo?usp=drive_link).
+You can simply clone this repo to get all data needed to run the tutorial. 
+
+Alternatively, access to the Data files to follow along the tutorial can be accessed here: [Google Drive Folder Link](https://drive.google.com/drive/folders/1L4oR2CkqmCIcGuHUSuyaQnW9GlauV3yo?usp=drive_link).
 
 # Prerequisites and Installation
 ## If using RStudio:
@@ -74,8 +75,7 @@ library(phyloseq)
 # Troubleshooting
 ## Using Rstudio:
 
-1. If time is an issue, remove ANCOMBC as a package to be installed from the vector p2
-2. If asked to update packages, select all (“a”)
+1. If asked to update packages, select all (“n”)
 
 ## Using Jupyter Notebook:
 
