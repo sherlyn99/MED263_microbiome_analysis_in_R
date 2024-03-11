@@ -90,7 +90,7 @@ BiocManager::install("phyloseq")
 ```
 
 # Contributors:
-This tutorial by Yan Hui was adapted by Sherlyn Wang, Kate Johnson, Shengjia Tu, and Avery Williams for the MED 263 Final Project.
+This tutorial by Yan Hui was adapted by Sherlyn Weng, Kate Johnson, Shengjia Tu, and Avery Williams for the MED 263 Final Project.
 
 # Acknowledgments:
 We thank the MED 263 course instructors and guest lecturers for their support and guidance throughout the winter quarter of 2024.
