@@ -75,7 +75,7 @@ library(phyloseq)
 # Troubleshooting
 ## Using Rstudio:
 
-1. If asked to update packages, select all (“n”)
+1. If asked to update packages, select all (“a”). If the installation errors out, try it again and select ("n").
 
 ## Using Jupyter Notebook:
 
