@@ -1,6 +1,6 @@
 ---
 title: "microbiome_analgysis_in_R"
-author: "Sherlyn Weng"
+author: "Sherlyn Weng, Avery Williams, Kate Johnson, Shengjia Tu"
 date: "2024-03-09"
 output: html_document
 ---
