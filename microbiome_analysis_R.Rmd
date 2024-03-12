@@ -49,7 +49,7 @@ can do it here.
 # install.packages('tidyverse', repos = "http://cran.us.r-project.aorg/")
 # install.packages('vegan', repos = "http://cran.us.r-project.aorg/")
 # install.packages('BiocManager', repos = "http://cran.us.r-project.aorg/")
-# library(BicMaanger)
+# library(BiocManager)
 # BiocManager::install("phyloseq")
 # BiocManager::install("DESeq2")
 # BiocManager::install("ComplexHeatmap")
