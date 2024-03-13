@@ -79,6 +79,10 @@ library(phyloseq)
 
 ## Using Jupyter Notebook:
 
+For this analysis, we will operate in the med263_R_jupyter environment. To access this git folder, in this environment, run the following lines:
+`git clone https://github.com/sherlyn99/MED263_microbiome_analysis_in_R`
+`conda install -c r r-tidyverse`
+
 1. If running into issues with the phyloseq package, run the following command to load dependencies of
 the package:
 
