@@ -44,6 +44,11 @@ invisible(lapply(c(p1,p2), load_package))
 Est. run time for package installation: .5-1 hours
 
 ## If using R in Jupyter Notebook:
+
+For this analysis, we will operate in the med263_R_jupyter environment. To access this git folder, in this environment, run the following lines:
+`git clone https://github.com/sherlyn99/MED263_microbiome_analysis_in_R`
+`conda install -c r r-tidyverse`
+
 Use the following code chunk:
 ```{r}
 install.packages("R.utils")
@@ -78,10 +83,6 @@ library(phyloseq)
 1. If asked to update packages, select all (“a”). If the installation errors out, try it again and select ("n").
 
 ## Using Jupyter Notebook:
-
-For this analysis, we will operate in the med263_R_jupyter environment. To access this git folder, in this environment, run the following lines:
-`git clone https://github.com/sherlyn99/MED263_microbiome_analysis_in_R`
-`conda install -c r r-tidyverse`
 
 1. If running into issues with the phyloseq package, run the following command to load dependencies of
 the package:
