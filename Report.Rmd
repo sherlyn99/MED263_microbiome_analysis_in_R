@@ -28,7 +28,7 @@ The class will first load data, then perform basic data inspection and cleaning 
 * Data cleaning & formatting
 * Rarefaction
 * Calculation of alpha diversity
-* Calculation of beta diversity & ERMANOVA to compare samples from different environments
+* Calculation of beta diversity & PERMANOVA to compare samples from different environments
 * Relative abundance profiles on phylum and genus level
 * Differential abundance analysis & heatmaps
 
