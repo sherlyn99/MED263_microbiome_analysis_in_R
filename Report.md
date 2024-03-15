@@ -1,0 +1,590 @@
+# MED 263 Final Project: Microbiome Analysis in R
+
+> The goal of this project is to learn basic techniques for analyzing microbiome data and investigate if human gut, palm, and tongue microbiomes differ in terms of composition and microbial diversity. 
+
+# Introduction
+Microbes are ubiquitous and have been shown to impact various host processes, including malnutrition and obesity<sup>4</sup>, inflammatory bowel disease<sup>5</sup>, and drug metabolism<sup>6</sup>. Therefore, understanding microbes and their composition in microbial communities at a genome level has important applications in the mechanisms of human disease and research involving bacteria. Using 16S ribosomal RNA (rRNA) sequencing, profiling microbiome data can identify species present in the samples and determine their relative abundance, enabling the measurement of microbial diversity of samples and the comparison of microbial diversity across samples<sup>7,8,9</sup>. This tutorial aims to cover bioinformatic methods in microbiome analysis. Using bioinformatic tools we can classify samples based on their microbial diversity and look at changes of aggregated measures under different treatments to the sampled microbe community.
+
+# Methods
+This tutorial uses a subset of publicly available hypervariable region 4 (V4) 16S rRNA dataset from Caporaso et al. (2011)<sup>10</sup>. The subset data includes human microbial samples taken from gut, left palm, right palm, and tongue. Three tsv files (feature-table.tsv, sample-metadata.tsv, taxonomy.tsv) will be made available through GitHub. R packages required in this tutorial include phyloseq<sup>11</sup>, tidyverse<sup>12</sup>, vegan<sup>13</sup>, DESeq2<sup>14</sup>, and ComplexHeatmap<sup>15</sup>.
+The class will first load data, then perform basic data inspection and cleaning to get familiar with high dimensional, compositional, and sparse microbiome data. They will then build a “phyloseq” object to perform rarefaction to minimize the bias from varying sampling depths. Furthermore, they will use “phyloseq” built-in functions to calculate alpha and beta diversity of samples, make principal coordinates analysis (PCoA) plots, and conduct statistical tests to compare these metrics between samples taken from different environments. To visualize the microbial composition of each sample, they will learn how to create relative abundance plots. Finally, the class will learn how to identify differentially abundant species using DESeq2. Through the use of ComplexHeatmap, they can visualize microbes that are differentially abundant in each environment.
+
+# Task List
+
+* Data cleaning & formatting
+* Rarefaction
+* Calculation of alpha diversity
+* Calculation of beta diversity & ERMANOVA to compare samples from different environments
+* Relative abundance profiles on phylum and genus level
+* Differential abundance analysis & heatmaps
+
+# Data Availability
+You can simply clone this repo to get all data needed to run the tutorial. 
+
+Alternatively, access to the Data files to follow along the tutorial can be accessed here: [Google Drive Folder Link](https://drive.google.com/drive/folders/1L4oR2CkqmCIcGuHUSuyaQnW9GlauV3yo?usp=drive_link).
+
+# Prerequisites and Installation
+## If using RStudio:
+The packages can be accessed by running this code chunk:
+
+```{r}
+p1 <- c("tidyverse", "vegan", "BiocManager")
+p2 <- c("phyloseq", "DESeq2", "ComplexHeatmap")
+load_package <- function(p) {
+if (!requireNamespace(p, quietly = TRUE)) {
+ifelse(p %in% p1,
+install.packages(p, repos = "http://cran.us.r-project.aorg/"),
+BiocManager::install(p))
+}
+library(p, character.only = TRUE, quietly = TRUE)
+}
+invisible(lapply(c(p1,p2), load_package))
+```
+
+Est. run time for package installation: .5-1 hours
+
+## If using R in Jupyter Notebook:
+
+For this analysis, we will operate in the med263_R_jupyter environment. To access this git folder, in this environment, run the following lines:
+`git clone https://github.com/sherlyn99/MED263_microbiome_analysis_in_R`
+`conda install -c r r-tidyverse`
+
+Use the following code chunk:
+```{r}
+install.packages("R.utils")
+p1 <- c("tidyverse", "vegan", "BiocManager")
+p2 <- c("phyloseq", "DESeq2", "ComplexHeatmap")
+load_package <- function(p) {
+if (!requireNamespace(p, quietly = TRUE)) {
+1
+ifelse(p %in% p1,
+install.packages(p, repos = "http://cran.us.r-project.org/"),
+BiocManager::install(p))
+}
+library(p, character.only = TRUE, quietly = TRUE)
+}
+invisible(lapply(c(p1,p2), load_package))
+```
+
+You then should be able to access these libraries without issue:
+```{r}
+library(IRdisplay)
+library(tidyverse)
+library(vegan)
+library(BiocManager)
+library(DESeq2)
+library(ComplexHeatmap)
+library(phyloseq)
+```
+
+# Troubleshooting
+## Using Rstudio:
+
+1. If asked to update packages, select all (“a”). If the installation errors out, try it again and select ("n").
+
+## Using Jupyter Notebook:
+
+1. If running into issues with the phyloseq package, run the following command to load dependencies of
+the package:
+
+```{r}
+install.packages("devtools")
+library(devtools)
+install_github("igraph/rigraph")
+BiocManager::install("phyloseq")
+```
+
+# Tutorial
+# Microbiome Analysis in R
+
+In this tutorial, we introduce basic microbiome analysis starting from the 
+processed output from 16S rRNA sequencing, i.e. feature table. Specifically, 
+we will look at the microbial compositions from different body sites of human, 
+including gut, tongue, left palm, and right palm. 
+
+This tutorial is adapted from https://www.yanh.org/2021/01/01/microbiome-r/. 
+Input data is sourced from Caporaso et. al, 2011 (https://pubmed.ncbi.nlm.nih.gov/21624126/)
+and processed using QIIME2.Data used in this tutorial were sequenced on an 
+Illumina HiSeq using the Earth Microbiome Project hypervariable region 4(V4) 
+16S rRNA sequencing protocol. 
+
+
+# 1. Load Packages
+
+Uncomment and run this chunk of code to install all required packages at once.
+You can select a block of code and press 'ctrl + shift + C` to uncomment the 
+code chunk. 
+```{r}
+# p1 <- c("tidyverse", "vegan", "BiocManager")
+# p2 <- c("phyloseq", "DESeq2", "ComplexHeatmap")
+# load_package <- function(p) {
+# if (!requireNamespace(p, quietly = TRUE)) {
+# ifelse(p %in% p1,
+# install.packages(p, repos = "http://cran.us.r-project.aorg/"),
+# BiocManager::install(p))
+# }
+# library(p, character.only = TRUE, quietly = TRUE)
+# }
+# invisible(lapply(c(p1,p2), load_package))
+```
+
+If you prefer to install packages one at a time (for trouble shooting.etc), you 
+can do it here. 
+```{r}
+# install.packages('tidyverse', repos = "http://cran.us.r-project.aorg/")
+# install.packages('vegan', repos = "http://cran.us.r-project.aorg/")
+# install.packages('BiocManager', repos = "http://cran.us.r-project.aorg/")
+# library(BiocManager)
+# BiocManager::install("phyloseq")
+# BiocManager::install("DESeq2")
+# BiocManager::install("ComplexHeatmap")
+```
+
+Now load all necessary packages
+```{r}
+library(tidyverse)      
+library(vegan)          
+library(BiocManager)
+library(DESeq2)
+library(ComplexHeatmap)
+library(phyloseq)
+```
+
+# 2. Load Data
+
+After sequencing, you will get some (fastq/fast5/h5) files from the sequencing. 
+These files contain the nucleotide information. If the sequenced sample is a mixed 
+community, i.e. metagenomics, you need to identify where the reads come from 
+(specific taxa and samples). 
+
+Established microbial pipelines such as QIIME2 can convert these nucleotide 
+information to the following outputs: 
+
+* Feature table (Necessary), a matrix containing the abundances of detected 
+microbial features (OTUs, ASVs, microbial markers)
+* Taxonomy table (Optional), an array indicating the taxonomic assignment of 
+features, which can be integrated in biom format.
+* Phylogenetic tree (Optional), a phylogenetic tree indicating the evolutional 
+similarity of microbial features, potentially used when calculating phylogenetic 
+diversity metrics (optionally integrated in biom format).
+* Metadata, a matrix containing the infomation for analysis (optionally 
+integrated in biom format).
+
+```{r}
+# load otu table (feature table)
+otu <- read.table(file = 'feature-table.tsv', sep = '\t', header = T, row.names = 1, skip = 1, comment.char = "") # 770 otus, 34 samples
+
+# load taxonomy (feature metadata)
+taxonomy <- read.table(file = 'taxonomy.tsv', sep = '\t', header = T, row.names = 1)
+
+# load metadata
+metadata <- read.table(file = "sample-metadata.tsv", sep = "\t", header = T, row.names = 1)
+
+# phylogenetic tree will be imported later
+```
+
+
+# 3. Clean Data
+
+Let's do some data cleaning for our taxonomy table.
+```{r}
+# clean the taxonomy
+tax <- taxonomy %>% 
+  select(Taxon) %>% 
+  separate(Taxon, c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species"), "; ")
+
+# fill up NA values
+tax.clean <- data.frame(row.names = row.names(tax), 
+                        Kingdom = str_replace(tax[, 1], "k__", ""), 
+                        Phylum = str_replace(tax[, 2], "p__", ""), 
+                        Class = str_replace(tax[, 3], "c__", ""), 
+                        Order = str_replace(tax[, 4], "o__", ""), 
+                        Family = str_replace(tax[, 5], "f__", ""), 
+                        Genus = str_replace(tax[, 6], "g__", ""), 
+                        Species = str_replace(tax[, 7], "s__", ""),
+                        stringsAsFactors = FALSE
+                        )
+
+tax.clean[is.na(tax.clean)] <- ""
+tax.clean[tax.clean  == "__"] <- ""
+
+for (i in 1:nrow(tax.clean)){
+  if (tax.clean[i,7] != ""){
+    tax.clean$Species[i] <- paste(tax.clean$Genus[i], tax.clean$Species[i], sep = " ")
+  } else if (tax.clean[i,2] == ""){
+    kingdom <- paste("Unclassified", tax.clean[i,1], sep = " ")
+    tax.clean[i, 2:7] <- kingdom
+  } else if (tax.clean[i,3] == ""){
+    phylum <- paste("Unclassified", tax.clean[i,2], sep = " ")
+    tax.clean[i, 3:7] <- phylum
+  } else if (tax.clean[i,4] == ""){
+    class <- paste("Unclassified", tax.clean[i,3], sep = " ")
+    tax.clean[i, 4:7] <- class
+  } else if (tax.clean[i,5] == ""){
+    order <- paste("Unclassified", tax.clean[i,4], sep = " ")
+    tax.clean[i, 5:7] <- order
+  } else if (tax.clean[i,6] == ""){
+    family <- paste("Unclassified", tax.clean[i,5], sep = " ")
+    tax.clean[i, 6:7] <- family
+  } else if (tax.clean[i,7] == ""){
+    tax.clean$Species[i] <- paste("Unclassified ",tax.clean$Genus[i], sep = " ")
+  }
+}
+```
+
+
+# 4. Build a phyloseq object
+
+Many microbiome analysis (alpha diversity, beta diversity) are standardized by 
+the package phyloseq. In order to run these analyses using phyloseq. Let's build 
+a phyloseq object first. 
+```{r}
+OTU = otu_table(as.matrix(otu), taxa_are_rows = TRUE)
+TAX = tax_table(as.matrix(tax.clean))
+SAMPLE <- sample_data(metadata)
+TREE = read_tree("tree.nwk")
+
+# merge all data to build a phyloseq object
+ps <- phyloseq(OTU, TAX, SAMPLE,TREE)
+```
+
+
+# 5. Rarefy samples 
+
+Let's take a look at the rarefaction curve first. The curve is created by 
+randomly re-sampling the pool of N samples several times and then plotting the 
+average number of species found in each sample. Generally, it initially grows 
+rapidly (as more common species are found) and then slightly flattens (as the 
+rarest species remain to be sampled).
+
+```{r}
+# check rarefaction curves
+knitr::include_graphics('rarefaction-1.png')
+```
+
+As we can see, a sequencing depth of 1000 has captured most taxa. To 
+minimize the bias from varying sequencing depth. Rarefaction is recommended 
+before calculating the diversity metrics. To be consistent with the original 
+publication, all samples are rarefied (re-sampled) to the sequencing depth of 
+1103. Note that since it's a random sampling process, the result is unlikely to 
+be identical as the publication.
+
+```{r}
+set.seed(111) # keep result reproductive
+ps.rarefied = rarefy_even_depth(ps, rngseed=1, sample.size=1103, replace=F)
+```
+
+# 6. Alpha diversity
+
+Alpha diversity metrics assess the species diversity with the ecosystems, 
+telling us how diverse a sequenced community is.
+
+Some common alpha diversity metrics:
+- observed: number of unique species identified in each sample
+- Shannon: shannon diversity index, which combines species richness and evenness
+
+
+## 6.1 Plot Observed and Shannon index across communities
+```{r}
+plot_richness(ps.rarefied, x="body.site", measure=c("Observed", "Shannon")) + 
+  geom_boxplot() +
+  theme_classic() +
+  theme(strip.background = element_blank(), axis.text.x.bottom = element_text(angle = -90))
+```
+
+
+## 6.2 Wilcox tests
+
+We could see tongue samples had the lowest alpha diversity. Next, some 
+statistics: pairwise test with Wilcoxon rank-sum test, corrected by FDR method. 
+```{r}
+rich = estimate_richness(ps.rarefied, measures = c("Observed", "Shannon"))
+wilcox.observed <- pairwise.wilcox.test(rich$Observed, 
+                                        sample_data(ps.rarefied)$body.site, 
+                                        p.adjust.method = "BH")
+tab.observed <- wilcox.observed$p.value %>%
+  as.data.frame() %>%
+  tibble::rownames_to_column(var = "group1") %>%
+  gather(key="group2", value="p.adj", -group1) %>%
+  na.omit()
+tab.observed
+```
+
+The species richness of tongue is significantly different from all the other 
+body sites (gut, left palm, and right palm).
+
+```{r}
+wilcox.shannon <- pairwise.wilcox.test(rich$Shannon, 
+                                       sample_data(ps.rarefied)$body.site, 
+                                       p.adjust.method = "BH")
+tab.shannon <- wilcox.shannon$p.value %>%
+  as.data.frame() %>%
+  tibble::rownames_to_column(var = "group1") %>%
+  gather(key="group2", value="p.adj", -group1) %>%
+  na.omit()
+tab.shannon
+```
+
+When looking at Shannon diversity index, which takes into account of not only
+species richness but also species evenness, tongue is significantly different 
+from left palm and right palm. 
+
+
+# 7. Beta Diversity
+
+## 7.1 Ordination plots
+
+Beta diversity metrics assess the dissimilarity between ecosystem, telling you 
+to what extend one community is different from another. Here are some demo code 
+using Bray Curtis and binary Jaccard distance metrics.
+
+```{r}
+dist = phyloseq::distance(ps.rarefied, method="bray")
+ordination = ordinate(ps.rarefied, method="PCoA", distance=dist)
+plot_ordination(ps.rarefied, ordination, color="body.site") + 
+  geom_point(size = 1.5) +
+  theme_classic() +
+  theme(strip.background = element_blank())
+```
+We can see that mostly samples cluster by body sites. Samples from the gut and 
+tongue area are separated from samples from the left and right palm area.
+
+
+## 7.2 Permanova
+
+
+```{r}
+metadata <- data.frame(sample_data(ps.rarefied))
+test.adonis <- adonis(unname(dist) ~ body.site, data = metadata)
+test.adonis <- as.data.frame(test.adonis$aov.tab)
+test.adonis
+```
+
+If you encounter an error using adonis, you can use adonis2, which gives similar 
+results. The use of function slightly varies from adonis. 
+```{r}
+# metadata <- data.frame(sample_data(ps.rarefied))
+# test.adonis <- adonis2(dist ~ body.site, data = metadata)
+# test.adonis <- as.data.frame(test.adonis)
+# test.adonis
+```
+
+
+## 7.2 Pairwise PERMANOVA
+```{r}
+cbn <- combn(x=unique(metadata$body.site), m = 2)
+p <- c()
+
+for(i in 1:ncol(cbn)){
+ps.subs <- subset_samples(ps.rarefied, body.site %in% cbn[,i])
+metadata_sub <- data.frame(sample_data(ps.subs))
+permanova_pairwise <- adonis(unname(phyloseq::distance(ps.subs, method = "bray")) ~ body.site, 
+                             data = metadata_sub)
+p <- c(p, permanova_pairwise$aov.tab$`Pr(>F)`[1])
+}
+
+p.adj <- p.adjust(p, method = "BH")
+p.table <- cbind.data.frame(t(cbn), p=p, p.adj=p.adj)
+p.table
+```
+As we could see, there’s no difference in composition between the left and right 
+palm samples. Can you run the same analysis with a binary Jaccard metrics and 
+a different ordination technique NMDS, to see if the results are robust across 
+ifferent difference metrics?
+
+```{r}
+dist = phyloseq::distance(ps.rarefied, method = "???") # TRY JACCARD DISTANCES (BINARY)
+# dist = phyloseq::distance(ps.rarefied, method = "jaccard", binary = TRUE)
+ordination = ordinate(ps.rarefied, method="PCoA", distance=dist)
+plot_ordination(ps.rarefied, ordination, color="body.site") + 
+  geom_point(size = 1.5) +
+  theme_classic() +
+  theme(strip.background = element_blank())
+
+# ANOSIM
+metadata <- data.frame(sample_data(ps.rarefied))
+anosim(dist, metadata$body.site)
+
+# Pairwise ANOSIM
+cbn <- combn(x=unique(metadata$body.site), m = 2)
+p <- c()
+
+for(i in 1:ncol(cbn)){
+ps.subs <- subset_samples(ps.rarefied, body.site %in% cbn[,i])
+metadata_sub <- data.frame(sample_data(ps.subs))
+permanova_pairwise <- anosim(phyloseq::distance(ps.subs, method="jaccard", binary = TRUE), 
+                             metadata_sub$body.site)
+p <- c(p, permanova_pairwise$signif[1])
+}
+
+p.adj <- p.adjust(p, method = "BH")
+p.table <- cbind.data.frame(t(cbn), p=p, p.adj=p.adj)
+p.table
+```
+
+
+# 8. Abundance plot
+
+Phylum level
+```{r}
+ps.rel = transform_sample_counts(ps, function(x) x/sum(x)*100)
+# agglomerate taxa
+glom <- tax_glom(ps.rel, taxrank = 'Phylum', NArm = FALSE)
+ps.melt <- psmelt(glom)
+# change to character for easy-adjusted level
+ps.melt$Phylum <- as.character(ps.melt$Phylum)
+
+ps.melt <- ps.melt %>%
+  group_by(body.site, Phylum) %>%
+  mutate(median=median(Abundance))
+# select group median > 1
+keep <- unique(ps.melt$Phylum[ps.melt$median > 1])
+ps.melt$Phylum[!(ps.melt$Phylum %in% keep)] <- "< 1%"
+#to get the same rows together
+ps.melt_sum <- ps.melt %>%
+  group_by(Sample,body.site,Phylum) %>%
+  summarise(Abundance=sum(Abundance))
+
+ggplot(ps.melt_sum, aes(x = Sample, y = Abundance, fill = Phylum)) + 
+  geom_bar(stat = "identity", aes(fill=Phylum)) + 
+  labs(x="", y="%") +
+  facet_wrap(~body.site, scales= "free_x", nrow=1) +
+  theme_classic() + 
+  theme(strip.background = element_blank(), 
+        axis.text.x.bottom = element_text(angle = -90))
+```
+
+Genus-level
+```{r}
+ps.rel = transform_sample_counts(ps, function(x) x/sum(x)*100)
+# agglomerate taxa
+glom <- tax_glom(ps.rel, taxrank = 'Genus', NArm = FALSE)
+ps.melt <- psmelt(glom)
+# change to character for easy-adjusted level
+ps.melt$Genus <- as.character(ps.melt$Genus)
+
+ps.melt <- ps.melt %>%
+  group_by(body.site, Genus) %>%
+  mutate(median=median(Abundance))
+# select group mean > 1
+keep <- unique(ps.melt$Genus[ps.melt$median > 2.5])
+ps.melt$Genus[!(ps.melt$Genus %in% keep)] <- "< 2.5%"
+#to get the same rows together
+ps.melt_sum <- ps.melt %>%
+  group_by(Sample,body.site,Genus) %>%
+  summarise(Abundance=sum(Abundance))
+
+ggplot(ps.melt_sum, aes(x = Sample, y = Abundance, fill = Genus)) + 
+  geom_bar(stat = "identity", aes(fill=Genus)) + 
+  labs(x="", y="%") +
+  facet_wrap(~body.site, scales= "free_x", nrow=1) +
+  theme_classic() + 
+  theme(legend.position = "right", 
+        strip.background = element_blank(), 
+        axis.text.x.bottom = element_text(angle = -90))
+```
+
+# 9. Differential abundancce analysis
+
+Differential abundance analysis allows you to identify differentially abundant 
+taxa between groups. There’s many methods, here DESeq2 is given as anexample. 
+Features are collapsed at the species-level prior to the calculation.
+```{r}
+sample_data(ps)$body.site <- as.factor(sample_data(ps)$body.site) # factorize for DESeq2
+ps.taxa <- tax_glom(ps, taxrank = 'Species', NArm = FALSE)
+```
+
+# 9.1 DESeq2
+
+DESeq2 is a software designed for RNA-seq, but also used in microbiome analysis.
+You may be troubled by the “zero” issues in microbiome analysis. A pseudo count 
+is added to avoid the errors in logarithm transformation.
+```{r}
+# pairwise comparison between gut and tongue
+ps.taxa.sub <- subset_samples(ps.taxa, body.site %in% c("gut", "tongue"))
+# filter sparse features, with > 90% zeros
+ps.taxa.pse.sub <- prune_taxa(rowSums(otu_table(ps.taxa.sub) == 0) < ncol(otu_table(ps.taxa.sub)) * 0.9, ps.taxa.sub)
+ps_ds = phyloseq_to_deseq2(ps.taxa.pse.sub, ~ body.site)
+# use alternative estimator on a condition of "every gene contains a sample with a zero"
+ds <- estimateSizeFactors(ps_ds, type="poscounts")
+ds = DESeq(ds, test="Wald", fitType="parametric")
+alpha = 0.05 
+res = results(ds, alpha=alpha)
+res = res[order(res$padj, na.last=NA), ]
+taxa_sig = rownames(res[1:20, ]) # select bottom 20 with lowest p.adj values
+ps.taxa.rel <- transform_sample_counts(ps, function(x) x/sum(x)*100)
+ps.taxa.rel.sig <- prune_taxa(taxa_sig, ps.taxa.rel)
+# Only keep gut and tongue samples
+ps.taxa.rel.sig <- prune_samples(colnames(otu_table(ps.taxa.pse.sub)), ps.taxa.rel.sig)
+```
+
+# 9.2 Heatmap
+```{r}
+matrix <- as.matrix(data.frame(otu_table(ps.taxa.rel.sig)))
+rownames(matrix) <- as.character(tax_table(ps.taxa.rel.sig)[, "Species"])
+metadata_sub <- data.frame(sample_data(ps.taxa.rel.sig))
+# Define the annotation color for columns and rows
+annotation_col = data.frame(
+    Subject = as.factor(metadata_sub$subject), 
+    `Body site` = as.factor(metadata_sub$body.site), 
+    check.names = FALSE
+)
+rownames(annotation_col) = rownames(metadata_sub)
+
+annotation_row = data.frame(
+    Phylum = as.factor(tax_table(ps.taxa.rel.sig)[, "Phylum"])
+)
+rownames(annotation_row) = rownames(matrix)
+
+# ann_color should be named vectors
+phylum_col = RColorBrewer::brewer.pal(length(levels(annotation_row$Phylum)), "Paired")
+names(phylum_col) = levels(annotation_row$Phylum)
+ann_colors = list(
+    Subject = c(`subject-1` = "red", `subject-2` = "blue"),
+    `Body site` = c(gut = "purple", tongue = "yellow"),
+    Phylum = phylum_col
+)
+
+ComplexHeatmap::pheatmap(matrix, scale= "row", 
+                         annotation_col = annotation_col, 
+                         annotation_row = annotation_row, 
+                         annotation_colors = ann_colors)
+```
+
+# Contributors:
+This tutorial by Yan Hui was adapted by Sherlyn Weng, Kate Johnson, Shengjia Tu, and Avery Williams for the MED 263 Final Project.
+
+# Acknowledgments:
+We thank the MED 263 course instructors and guest lecturers for their support and guidance throughout the winter quarter of 2024.
+
+# References:
+
+1. Grice, E. A., & Segre, J. A. (2012). The human microbiome: our second genome. Annual review of genomics and human genetics, 13, 151-170.
+
+2. Sender, R., Fuchs, S., & Milo, R. (2016). Revised estimates for the number of human and bacteria cells in the body. PLoS biology, 14(8), e1002533.
+
+3. Ursell, L. K., Metcalf, J. L., Parfrey, L. W., & Knight, R. (2012). Defining the human microbiome. Nutrition reviews, 70(suppl_1), S38-S44.
+
+4. Fan, Y., & Pedersen, O. (2021). Gut microbiota in human metabolic health and disease. Nature Reviews Microbiology, 19(1), 55-71.
+
+5. Halfvarson, J. et al. (2017). Dynamics of the human gut microbiome in inflammatory bowel disease. Nat Microbiol 2: 17004.
+
+6. Enright, E. F., Joyce, S. A., Gahan, C. G., & Griffin, B. T. (2017). Impact of gut microbiota-mediated bile acid metabolism on the solubilization capacity of bile salt micelles and drug solubility. Molecular Pharmaceutics, 14(4), 1251-1263.
+
+7. Caporaso, J. G. et al. Global patterns of 16S rRNA diversity at a depth of millions of sequences per sample. Proceedings of the national academy of sciences, 108(supplement_1), 4516-4522.
+
+8. Kuczynski, J., Lauber, C. L., Walters, W. A., Parfrey, L. W., Clemente, J. C., Gevers, D., & Knight, R. (2012). Experimental and analytical tools for studying the human microbiome. Nature Reviews Genetics, 13(1), 47-58.
+
+9. Morgan, X. C., & Huttenhower, C. (2012). Chapter 12: Human microbiome analysis. PLoS computational biology, 8(12), e1002808.
+
+10. Caporaso, J. G., Lauber, C. L., Costello, E. K., Berg-Lyons, D., Gonzalez, A., Stombaugh, J., ... & Knight, R. (2011). Moving pictures of the human microbiome. Genome biology, 12(5), 1-8.
+
+11. McMurdie and Holmes (2013) phyloseq: An R Package for Reproducible Interactive Analysis and Graphics of Microbiome Census Data. PLoS ONE. 8(4):e61217
+
+12. Wickham H, Averick M, Bryan J, Chang W, McGowan LD, François R, Grolemund G, Hayes A, Henry L, Hester J, Kuhn M, Pedersen TL, Miller E, Bache SM, Müller K, Ooms J, Robinson D, Seidel DP, Spinu V, Takahashi K, Vaughan D, Wilke C, Woo K, Yutani H (2019). “Welcome to the tidyverse.” Journal of Open Source Software, 4(43), 1686. doi:10.21105/joss.01686.
+
+13. Oksanen J, Simpson G, Blanchet F, Kindt R, Legendre P, Minchin P, O'Hara R, Solymos P, Stevens M, Szoecs E, Wagner H, Barbour M, Bedward M, Bolker B, Borcard D, Carvalho G, Chirico M, De Caceres M, Durand S, Evangelista H, FitzJohn R, Friendly M, Furneaux B, Hannigan G, Hill M, Lahti L, McGlinn D, Ouellette M, Ribeiro Cunha E, Smith T, Stier A, Ter Braak C, Weedon J (2022). _vegan: Community Ecology Package_. R package version 2.6-4, <https://CRAN.R-project.org/package=vegan>.
+
+14. Love, M.I., Huber, W., Anders, S. Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2 Genome Biology 15(12):550 (2014)
+
+15. Gu, Z. (2016) Complex heatmaps reveal patterns and correlations in multidimensional genomic data. Bioinformatics. https://doi.org/10.1093/bioinformatics/btw313.
