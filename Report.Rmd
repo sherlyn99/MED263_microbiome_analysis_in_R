@@ -501,7 +501,7 @@ ggplot(ps.melt_sum, aes(x = Sample, y = Abundance, fill = Genus)) +
 # 9. Differential abundancce analysis
 
 Differential abundance analysis allows you to identify differentially abundant 
-taxa between groups. There’s many methods, here DESeq2 is given as anexample. 
+taxa between groups. There’s many methods, here DESeq2 is given as an example. 
 Features are collapsed at the species-level prior to the calculation.
 ```{r}
 sample_data(ps)$body.site <- as.factor(sample_data(ps)$body.site) # factorize for DESeq2
