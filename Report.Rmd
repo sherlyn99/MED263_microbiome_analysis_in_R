@@ -1,3 +1,17 @@
+---
+title: "MED 263 Final Report"
+author: "Sherlyn Weng, Kate Johnson, Shengjia Tu, and Avery Williams"
+date: "2024-03-15"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
 # MED 263 Final Project: Microbiome Analysis in R
 
 > The goal of this project is to learn basic techniques for analyzing microbiome data and investigate if human gut, palm, and tongue microbiomes differ in terms of composition and microbial diversity. 
